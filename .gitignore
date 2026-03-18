@@ -1,4 +1,5 @@
 build/
+build_win/
 example/
 
 compile_commands.json

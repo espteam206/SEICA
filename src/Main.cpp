@@ -1,4 +1,5 @@
-#include <print>
+// #include <print>
+#include <cstdio>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -18,7 +19,8 @@ void error_callback(int error, const char* description)
 
 int main() {
     if (!glfwInit()) {
-        std::println("Failed to initialize GLFW.");
+        // std::println("Failed to initialize GLFW.");
+        std::printf("Failed to initialize GLFW");
         return -1;
     }
 
@@ -29,7 +31,8 @@ int main() {
 
     if (!window) {
         glfwTerminate();
-        std::println("Could not create window.");
+        // std::println("Could not create window.");
+        std::printf("Could not create window.");
         return -1;
     }
 
