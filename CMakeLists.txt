@@ -113,7 +113,6 @@ set(SOURCES
     "src/Main.cpp"
     "src/App.h"
     "src/App.cpp"
-    "src/Types.h"
     "src/CSV.h"
     "src/Calc.cpp"
 )

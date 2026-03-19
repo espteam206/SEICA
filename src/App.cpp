@@ -4,7 +4,7 @@
 #include <imgui.h>
 #include <implot.h>
 
-#include <iostream>
+#include <cstdio>
 
 App* App::s_Instance;
 
@@ -34,9 +34,6 @@ App::App() {
     style.ChildBorderSize = 0.0f;
     style.WindowMinSize = { 200.0f, 200.0f };
 
-    m_CemVals.reserve(3);
-    m_CemVals.emplace_back();
-
     LoadData("res/Data.csv");
 }
 
@@ -50,76 +47,93 @@ void App::WindowInput() {
 
     ImGui::Begin("Mixture parameters", &m_ShowInput);
 
-    ImGui::Text("Cementitious materials");
-    ImGui::SameLine();
-    HelpWidget(R"(Input cementitious materials here
-*more stuff about cementitious materials*)");
-    ImGui::SameLine();
-    if (ImGui::Button(" ? "))
-        ImGui::OpenPopup("Mixture Values Information");
-    WindowMixtures();
+    static constexpr const char* titles[] = {
+        "Cementitious materials",
+        "Admixtures",
+        "Aggregates",
+    };
 
-    ImGui::Separator();
-
-    // float minusWidth = ImGui::CalcTextSize("-").x;
-    float minusHeight = ImGui::GetTextLineHeightWithSpacing();
-
-    ImGuiTableFlags tableFlags = ImGuiTableFlags_SizingFixedFit;
-
-    for (int i = 0; i < m_CemVals.size(); ++i) {
-        ImGui::PushID(i);
-
-        ImGui::BeginTable("inputs", 3, tableFlags);
-        ImGui::TableNextRow();
-
-        ImGui::TableNextColumn();
-        // The delete button
-        // TODO: Make it square
-        ImGui::PushItemWidth(100);
-        if (ImGui::Button("-")) {
-            m_CemVals.erase(std::next(m_CemVals.begin(), i));
-            ImGui::EndTable();
-            ImGui::PopID();
+    for (int32_t type = 0; type < CONTRIBUTOR_TYPE_CNT; ++type) {
+        if (type == ContributorType::Transport)
             continue;
+
+        ImGui::PushID(type);
+
+        ImGui::Text("%s", titles[type]);
+        ImGui::SameLine();
+        if (ImGui::Button(" ? "))
+            ImGui::OpenPopup(s_ContribPopupTitles[type]);
+        WindowMixtures();
+
+        ImGui::Separator();
+
+        std::vector<InputVal>& vals = m_InputVals[type];
+
+        for (int i = 0; i < vals.size(); ++i) {
+            ImGui::PushID(i);
+
+            ImGui::BeginTable("inputs", 3, ImGuiTableFlags_SizingFixedFit);
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            // The delete button
+            // TODO: Make it square
+            ImGui::PushItemWidth(100);
+            if (ImGui::Button("-")) {
+                vals.erase(std::next(vals.begin(), i));
+                ImGui::EndTable();
+                ImGui::PopID();
+                continue;
+            }
+            ImGui::PopItemWidth();
+
+            ImGui::TableNextColumn();
+            // ImGui::SetNextItemWidth(TEXT_BASE_WIDTH * 30);
+            ImGui::SetNextItemWidth(150);
+            std::vector<MixtureVal>& values = m_MixVals[type];
+            const char* comboStr = vals[i].Name != -1 ? values[vals[i].Name].Name.c_str() : "";
+            if (ImGui::BeginCombo("Type", comboStr)) {
+                for (uint32_t j = 0; j < values.size(); ++j)
+                    if (ImGui::Selectable(values[j].Name.c_str()))
+                        vals[i].Name = j;
+
+                ImGui::EndCombo();
+            }
+
+            ImGui::TableNextColumn();
+            ImGui::InputFloat("%", &vals[i].Value, 0.0f, 0.0f, "%.2f");
+
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn(); // Skip the column with the "minus" button
+
+            ImGui::TableNextColumn();
+            ImGui::SetNextItemWidth(150);
+            std::vector<MixtureVal>& transVals = m_MixVals[ContributorType::Transport];
+            comboStr = vals[i].Trans != -1 ? transVals[vals[i].Trans].Name.c_str() : "";
+            if (ImGui::BeginCombo("Type##Transport", comboStr)) {
+                for (uint32_t j = 0; j < transVals.size(); ++j)
+                    if (ImGui::Selectable(transVals[j].Name.c_str()))
+                        vals[i].Trans = j;
+
+                ImGui::EndCombo();
+            }
+
+            ImGui::TableNextColumn();
+            ImGui::InputFloat("km", &vals[i].Dist, 0.0f, 0.0f, "%.1f");
+
+            ImGui::Dummy(ImVec2(0.0f, 20.0f));
+            ImGui::EndTable();
+
+            ImGui::PopID();
         }
-        ImGui::PopItemWidth();
 
-        ImGui::TableNextColumn();
-        // ImGui::SetNextItemWidth(TEXT_BASE_WIDTH * 30);
-        ImGui::SetNextItemWidth(150);
-        if (ImGui::BeginCombo("Type", m_CemVals[i].Type != -1 ? m_MixVals[m_CemVals[i].Type].Name.c_str() : "")) {
-            for (uint32_t j = 0; j < m_MixVals.size(); ++j)
-                if (m_MixVals[j].Type == ContributorType::Cement)
-                    if (ImGui::Selectable(m_MixVals[j].Name.c_str()))
-                        m_CemVals[i].Type = j;
-
-            ImGui::EndCombo();
-        }
-        // ImGui::Combo("Type", &m_CemVals[i].Type, cementNames->data(), cementNames->size());
-        ImGui::TableNextColumn();
-        ImGui::InputFloat("%", &m_CemVals[i].Value);
-
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn(); // Skip the column with the "minus" button
-
-        ImGui::TableNextColumn();
-        ImGui::SetNextItemWidth(150);
-        ImGui::Text("Transport Type placeholder");
-        // ImGui::Combo("Transport Type", (int*)&m_CemVals[i].Trans, TRANSPORT_STRS, TRANSPORT_TYPES_CNT);
-        ImGui::TableNextColumn();
-        ImGui::InputFloat("km", &m_CemVals[i].Dist);
+        if (ImGui::Button("Add"))
+            vals.emplace_back();
 
         ImGui::Dummy(ImVec2(0.0f, 20.0f));
-        ImGui::EndTable();
 
         ImGui::PopID();
     }
-
-    if (ImGui::Button("Add##Cementitious")) {
-        m_CemVals.emplace_back();
-    }
-
-    ImGui::Dummy(ImVec2(0.0f, 20.0f));
 
     ImGui::PushItemWidth(ImGui::GetWindowSize().x);
     ImGui::Button("Calculate!");
@@ -168,62 +182,65 @@ void App::WindowGraph() {
 }
 
 void App::WindowMixtures() {
-    // Always center this window when appearing
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    if (ImGui::BeginPopupModal("Mixture Values Information", NULL, ImGuiWindowFlags_HorizontalScrollbar)) {
-        ImGuiTableFlags tableFlags =
-            ImGuiTableFlags_Borders
-            | ImGuiTableFlags_ScrollX
-            | ImGuiTableFlags_ScrollY;
-        ImVec2 outerSize = ImVec2(ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 7 + 30));
-        ImGui::BeginTable("Mixture info", 6, tableFlags, outerSize);
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn(); ImGui::Text("Contributor");
-        ImGui::TableNextColumn(); ImGui::Text("Name");
-        ImGui::TableNextColumn(); ImGui::Text("Value");
-        ImGui::TableNextColumn(); ImGui::Text("Accuracy");
-        ImGui::TableNextColumn(); ImGui::Text("Location");
-        ImGui::TableNextColumn(); ImGui::Text("Source");
+    for (int32_t type = 0; type < CONTRIBUTOR_TYPE_CNT; ++type) {
+        static char valueHeader[10];
+        sprintf(valueHeader, "Value (%s)", s_ContribValueUnits[type]);
 
-        for (const MixtureVal& val : m_MixVals) {
-            ImGui::PushID(&val);
-            ImGui::TableNextRow();
+        // Always center this window when appearing
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        if (ImGui::BeginPopupModal(s_ContribPopupTitles[type], NULL, ImGuiWindowFlags_HorizontalScrollbar)) {
+            ImGuiTableFlags tableFlags =
+                ImGuiTableFlags_Borders
+                | ImGuiTableFlags_ScrollX
+                | ImGuiTableFlags_ScrollY;
+            ImVec2 outerSize = ImVec2(ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 7 + 30));
+            ImGui::BeginTable("Mixture info", 6, tableFlags, outerSize);
+            ImGui::TableSetupColumn("#",         ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableSetupColumn("Name",      ImGuiTableColumnFlags_WidthFixed, 300.f);
+            ImGui::TableSetupColumn(valueHeader, ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableSetupColumn("Accuracy",  ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableSetupColumn("Location",  ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableSetupColumn("Source",    ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableHeadersRow();
 
-            ImGui::TableNextColumn();
-            switch (val.Type) {
-            case ContributorType::Cement:    ImGui::Text("Cement");    break;
-            case ContributorType::Admixture: ImGui::Text("Admixture"); break;
-            case ContributorType::Aggregate: ImGui::Text("Aggregate"); break;
-            case ContributorType::Transport: ImGui::Text("Transport"); break;
-            }
+            for (const MixtureVal& val : m_MixVals[type]) {
+                ImGui::PushID(&val);
+                ImGui::TableNextRow();
 
-            ImGui::TableNextColumn();
-            ImGui::Text("%s", val.Name.c_str());
-            if (ImGui::BeginItemTooltip()) {
+                ImGui::TableNextColumn();
+                ImGui::Text("N");  // TODO: INSERT NUMBER HERE
+
+                ImGui::TableNextColumn();
                 ImGui::Text("%s", val.Name.c_str());
-                ImGui::EndTooltip();
+                // Since long names are cut off, provide
+                // a tooltip with the full name if hovered over
+                if (ImGui::BeginItemTooltip()) {
+                    ImGui::Text("%s", val.Name.c_str());
+                    ImGui::EndTooltip();
+                }
+
+                ImGui::TableNextColumn();
+                ImGui::Text("%.2f", val.Value);
+                ImGui::TableNextColumn();
+                ImGui::Text("%.2f%%", val.Accuracy * 100);
+                ImGui::TableNextColumn();
+                ImGui::Text("%s", val.Location.c_str());
+                ImGui::TableNextColumn();
+                if (val.Source.find("https://") == 0)
+                    ImGui::TextLinkOpenURL(val.Source.c_str());
+                else
+                    ImGui::Text("%s", val.Source.c_str());
+
+                ImGui::PopID();
             }
 
-            ImGui::TableNextColumn();
-            ImGui::Text("%.2f", val.Value);
-            ImGui::TableNextColumn();
-            ImGui::Text("%.2f%%", val.Accuracy * 100);
-            ImGui::TableNextColumn();
-            ImGui::Text("%s", val.Location.c_str());
-            ImGui::TableNextColumn();
-            if (val.Source.find("https://") == 0)
-                ImGui::TextLinkOpenURL(val.Source.c_str());
-            else
-                ImGui::Text("%s", val.Source.c_str());
+            ImGui::EndTable();
 
-            ImGui::PopID();
+            if (ImGui::Button("Close"))
+                ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
         }
-        ImGui::EndTable();
-
-        if (ImGui::Button("Close"))
-            ImGui::CloseCurrentPopup();
-        ImGui::EndPopup();
     }
 }
 
@@ -377,7 +394,8 @@ void App::WindowDemoGraph() {
 void App::LoadData(const std::filesystem::path& path) {
     CSV csv(path);
 
-    m_MixVals.reserve(csv.GetLineCount() + 100);
+    for (std::vector<MixtureVal>& m : m_MixVals)
+        m.reserve(csv.GetLineCount() / CONTRIBUTOR_TYPE_CNT);
 
     while (csv.NextLine()) {
         try {
@@ -399,16 +417,16 @@ void App::LoadData(const std::filesystem::path& path) {
             else if (contributor == "Transport")
                 type = ContributorType::Transport;
             else if (contributor == "SCM") {
-                std::cout << "Ignoring \"SCM\" contributor type...\n";
+                printf("Ignoring \"SCM\" contributor type...\n");
                 continue;
             } else if (contributor == "Water") {
-                std::cout << "Ignoring \"Water\" contributor type...\n";
+                printf("Ignoring \"Water\" contributor type...\n");
                 continue;
             } else
                 throw std::invalid_argument("Invalid contributor type");
 
-            m_MixVals.emplace_back(
-                type,
+            m_MixVals[type].emplace_back(
+                // type,
                 value,
                 accuracy,
                 std::move(name),
@@ -416,12 +434,12 @@ void App::LoadData(const std::filesystem::path& path) {
                 std::move(source)
             );
         } catch (std::bad_optional_access& e) {
-            std::cout << "Error reading csv file!\n";
-            std::cout << "Row: " << csv.GetRow() << " column: " << csv.GetColumn() << "\n";
+            printf("Error reading csv file!\n");
+            printf("Row: %d column: %d\n", csv.GetRow(), csv.GetColumn());
             continue;
         } catch (std::invalid_argument& e) {
-            std::cout << "Invalid value in csv file!\n";
-            std::cout << "Row: " << csv.GetRow() << " column: " << csv.GetColumn() << "\n";
+            printf("Error reading csv file!\n");
+            printf("Row: %d column: %d\n", csv.GetRow(), csv.GetColumn());
             continue;
         }
     }

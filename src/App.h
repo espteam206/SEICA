@@ -35,8 +35,22 @@ private:
         CONTRIBUTOR_TYPE_CNT
     };
 
+    // Window titles for help popups of respective contributor types
+    static constexpr const char* s_ContribPopupTitles[CONTRIBUTOR_TYPE_CNT] = {
+        "Cements",
+        "Admixtures",
+        "Aggregates",
+        "Transport Method",
+    };
+
+    static constexpr const char* s_ContribValueUnits[CONTRIBUTOR_TYPE_CNT] = {
+        "Kg/Kg",
+        "Kg/Kg",
+        "Kg/Kg",
+        "Kg/Tonne*Km",
+    };
+
     struct MixtureVal {
-        ContributorType Type;
         float Value;
         float Accuracy;
         std::string Name;
@@ -44,22 +58,19 @@ private:
         std::string Source;
     };
 
-    std::vector<MixtureVal> m_MixVals;
-
-    // We need an array of just names for the input dropdown menu
-    // (imgui accepts a const char*[] for the dropdown options)
-    // std::array<std::vector<const char*>, CONTRIBUTOR_TYPE_CNT> m_ContrNames;
+    std::array<std::vector<MixtureVal>, CONTRIBUTOR_TYPE_CNT> m_MixVals;
 
     struct InputVal {
-        int32_t Type;
+        int32_t Name; // Index into m_MixVals[*type*]
         float Value;
-        // TransportType Trans;
+        int32_t Trans; // Index into m_MixVals[ContributorType::Transport]
         float Dist;
 
-        InputVal() : Type(-1), Value(0.0f), Dist(0.0f) {}
+        InputVal() : Name(-1), Value(0.0f), Trans(-1), Dist(0.0f) {}
     };
 
-    std::vector<InputVal> m_CemVals;
+    // Exclude the Transport Method
+    std::array<std::vector<InputVal>, CONTRIBUTOR_TYPE_CNT> m_InputVals;
 
     // Window toggles
     bool m_ShowInput = true;
