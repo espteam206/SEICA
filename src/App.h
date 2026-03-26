@@ -29,25 +29,31 @@ private:
 private:
     enum ContributorType {
         Cement,
+        SCM,
         Admixture,
         Aggregate,
         Transport,
+        Water,
         CONTRIBUTOR_TYPE_CNT
     };
 
     // Window titles for help popups of respective contributor types
     static constexpr const char* s_ContribPopupTitles[CONTRIBUTOR_TYPE_CNT] = {
         "Cements",
+        "SCM",
         "Admixtures",
         "Aggregates",
         "Transport Method",
+        "Water",
     };
 
     static constexpr const char* s_ContribValueUnits[CONTRIBUTOR_TYPE_CNT] = {
-        "Kg/Kg",
-        "Kg/Kg",
-        "Kg/Kg",
-        "Kg/Tonne*Km",
+        "kg/kg",
+        "kg/kg",
+        "kg/kg",
+        "kg/kg",
+        "kg/tonne*km",
+        "kg/m^3",
     };
 
     struct MixtureVal {

@@ -47,11 +47,16 @@ void App::WindowInput() {
 
     ImGui::Begin("Mixture parameters", &m_ShowInput);
 
+#if 0
     static constexpr const char* titles[] = {
         "Cementitious materials",
+        "Supplementary cementitious materials",
         "Admixtures",
         "Aggregates",
+        "Transport",
+        "Water",
     };
+#endif
 
     for (int32_t type = 0; type < CONTRIBUTOR_TYPE_CNT; ++type) {
         if (type == ContributorType::Transport)
@@ -59,7 +64,7 @@ void App::WindowInput() {
 
         ImGui::PushID(type);
 
-        ImGui::Text("%s", titles[type]);
+        ImGui::Text("%s", s_ContribPopupTitles[type]);
         ImGui::SameLine();
         if (ImGui::Button(" ? "))
             ImGui::OpenPopup(s_ContribPopupTitles[type]);
@@ -416,13 +421,11 @@ void App::LoadData(const std::filesystem::path& path) {
                 type = ContributorType::Cement;
             else if (contributor == "Transport")
                 type = ContributorType::Transport;
-            else if (contributor == "SCM") {
-                printf("Ignoring \"SCM\" contributor type...\n");
-                continue;
-            } else if (contributor == "Water") {
-                printf("Ignoring \"Water\" contributor type...\n");
-                continue;
-            } else
+            else if (contributor == "SCM")
+                type = ContributorType::SCM;
+            else if (contributor == "Water")
+                type = ContributorType::Water;
+            else
                 throw std::invalid_argument("Invalid contributor type");
 
             m_MixVals[type].emplace_back(

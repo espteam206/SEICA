@@ -1,10 +1,5 @@
 # SEICA
-The desktop alternative design for concrete carbon calculation.
-S - Software for
-E - Emissions
-I - In
-C - Concrete
-A - Accounting
+SEICA (Software for Emissions In Concrete Accounting) is the desktop alternative design for concrete carbon calculation.
 
 ## Compiling
 Requires CMake to build. CMake will automatically fetch all the dependencies
