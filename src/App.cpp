@@ -35,6 +35,9 @@ App::App() {
     style.WindowMinSize = { 200.0f, 200.0f };
 
     LoadData("res/Data.csv");
+
+    // static const ImU32 MyColors[3] = {IM_COL32(255,0,0,255), IM_COL32(0,255,0,255), IM_COL32(0,0,255,255)};
+    // ImPlotColormap myColormap = ImPlot::AddColormap("DFSLJKSFDLJKDSFLKJ", MyColors, 3);
 }
 
 App::~App() {
@@ -45,18 +48,20 @@ void App::WindowInput() {
     if (!m_ShowInput)
         return;
 
+    static constexpr const char* s_InputValueUnits[CONTRIBUTOR_TYPE_CNT] = {
+        "% mass",
+        "% mass",
+        "kg/m^3 cement",
+        "kg/m^3 cement",
+        "kg/(tonne*km)",
+        "% some weird-ass ratio",
+    };
+
     ImGui::Begin("Mixture parameters", &m_ShowInput);
 
-#if 0
-    static constexpr const char* titles[] = {
-        "Cementitious materials",
-        "Supplementary cementitious materials",
-        "Admixtures",
-        "Aggregates",
-        "Transport",
-        "Water",
-    };
-#endif
+    ImGui::InputFloat("kg cementitious materials / m^3 mixture", &m_CementitiousMass, 0.0f, 0.0f, "%.2f");
+    ImGui::InputFloat("Total mixture volume", &m_TotalVolume, 0.0f, 0.0f, "%.2f");
+    ImGui::Separator();
 
     for (int32_t type = 0; type < CONTRIBUTOR_TYPE_CNT; ++type) {
         if (type == ContributorType::Transport)
@@ -68,7 +73,7 @@ void App::WindowInput() {
         ImGui::SameLine();
         if (ImGui::Button(" ? "))
             ImGui::OpenPopup(s_ContribPopupTitles[type]);
-        WindowMixtures();
+        PopupMixtures();
 
         ImGui::Separator();
 
@@ -106,10 +111,18 @@ void App::WindowInput() {
             }
 
             ImGui::TableNextColumn();
-            ImGui::InputFloat("%", &vals[i].Value, 0.0f, 0.0f, "%.2f");
+            const char* unit = s_InputValueUnits[type];
+            ImGui::InputFloat(unit, &vals[i].Value, 0.0f, 0.0f, "%.2f");
 
             ImGui::TableNextRow();
             ImGui::TableNextColumn(); // Skip the column with the "minus" button
+
+            if (type == ContributorType::Water) {
+                // Assume water is provided at the source
+                ImGui::EndTable();
+                ImGui::PopID();
+                continue;
+            }
 
             ImGui::TableNextColumn();
             ImGui::SetNextItemWidth(150);
@@ -141,7 +154,9 @@ void App::WindowInput() {
     }
 
     ImGui::PushItemWidth(ImGui::GetWindowSize().x);
-    ImGui::Button("Calculate!");
+    if (ImGui::Button("Calculate!")) {
+        Calculate();
+    }
 
     ImGui::End();
 }
@@ -151,18 +166,6 @@ void App::WindowGraph() {
         return;
 
     ImGui::Begin("Carbon Footprint", &m_ShowGraph);
-
-    const char* labels[] = {
-        "St. Marys Cement - C595",
-        "Lafarge Canada - General Use",
-        "Votorantim Cimentos GU",
-    };
-
-    float values[] = {
-        0.50f,
-        0.25f,
-        0.25f,
-    };
 
     ImPlotPieChartFlags flags = 0;
     flags |= ImPlotPieChartFlags_Exploding;
@@ -179,14 +182,79 @@ void App::WindowGraph() {
     if (ImPlot::BeginPlot("##Footprint composition", { width, width })) {
         ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_NoDecorations);
         ImPlot::SetupAxesLimits(0, 1, 0, 1);
-        ImPlot::PlotPieChart(labels, values, 3, 0.5, 0.5, 0.4, "%.2f", 90, flags);
+        ImPlot::PushStyleColor(ImPlotCol_Fill, (ImVec4){ 0.0f, 1.0f, 1.0f, 1.0f });
+        ImPlot::PushStyleColor(ImPlotCol_LegendBg, (ImVec4){ 0.0f, 1.0f, 1.0f, 1.0f });
+        // Use the custom colormap
+        // ImPlot::PushColormap("DFSLJKSFDLJKDSFLKJ");
+        ImPlot::PlotPieChart(m_GraphLabels.data(), m_GraphValues.data(), m_GraphValues.size(), 0.5, 0.5, 0.4, "%.2f", 90, flags);
+        ImPlot::PopStyleColor(2);
+        // ImPlot::PopColormap();
+
         ImPlot::EndPlot();
     }
 
     ImGui::End();
 }
 
-void App::WindowMixtures() {
+void App::WindowCalcs() {
+    if (!m_ShowCalcs)
+        return;
+
+    ImGui::Begin("Carbon Footprint Details", &m_ShowCalcs);
+
+    ImGui::Text("CO2 emitted per m^3 (kg): %.2f", m_TotalCO2);
+    ImGui::Text("Total CO2 emitted (kg): %.2f", m_TotalVolume * m_TotalCO2);
+
+    ImGui::Dummy(ImVec2(0.0f, 20.0f));
+
+    ImGuiTableFlags tableFlags =
+        ImGuiTableFlags_Borders
+        | ImGuiTableFlags_ScrollX
+        | ImGuiTableFlags_ScrollY;
+    if (ImGui::BeginTable("##Carbon Footprint Details", 4, tableFlags)) {
+        ImGui::TableSetupColumn("Name");
+        ImGui::TableSetupColumn("Material kg per m^3");
+        ImGui::TableSetupColumn("CO2 kg per m^3");
+        ImGui::TableSetupColumn("Percentage Contribution");
+        ImGui::TableHeadersRow();
+        for (uint32_t i = 0; i < m_GraphLabels.size(); ++i) {
+            ImGui::PushID(i);
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            ImGui::Text("%s", m_GraphLabels[i]);
+
+            ImGui::TableNextColumn();
+            if (m_MassValues[i] == 0.0f)
+                ImGui::Text("N/A");
+            else
+                ImGui::Text("%.2f", m_MassValues[i]);
+
+            ImGui::TableNextColumn();
+            ImGui::Text("%.2f", m_GraphValues[i]);
+
+            ImGui::TableNextColumn();
+            ImGui::Text("%.2f%%", m_GraphValues[i] * 100.0f / m_TotalCO2);
+
+            ImGui::PopID();
+        }
+
+        ImGui::EndTable();
+    }
+
+    ImGui::End();
+}
+
+void App::PopupMixtures() {
+    static constexpr const char* s_ContribValueUnits[CONTRIBUTOR_TYPE_CNT] = {
+        "kg/kg",
+        "kg/kg",
+        "kg/kg",
+        "kg/kg",
+        "kg/tonne*km",
+        "kg/m^3",
+    };
+
     for (int32_t type = 0; type < CONTRIBUTOR_TYPE_CNT; ++type) {
         static char valueHeader[10];
         sprintf(valueHeader, "Value (%s)", s_ContribValueUnits[type]);
@@ -295,8 +363,9 @@ void App::WindowDockSpace() {
         }
 
         if (ImGui::BeginMenu("View")) {
-            if (ImGui::MenuItem("Graph"))         { m_ShowGraph = true; }
-            if (ImGui::MenuItem("Mixture Input")) { m_ShowInput = true; }
+            if (ImGui::MenuItem("Graph"))               { m_ShowGraph = true; }
+            if (ImGui::MenuItem("Mixture Input"))       { m_ShowInput = true; }
+            if (ImGui::MenuItem("Caclulation details")) { m_ShowCalcs = true; }
 
             ImGui::Separator();
 
@@ -314,7 +383,7 @@ void App::WindowDockSpace() {
         ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
         if (ImGui::BeginPopupModal("About##Popup")) {
             ImGui::Text("Concrete carbon calculator\n");
-            ImGui::Text(R"(Project by:
+            ImGui::Text(R"(Authors:
 Jeffrey Chen
 Ruth Cheng
 Zoey Fong
@@ -351,6 +420,7 @@ void App::Update(float dt) {
     WindowDockSpace();
     WindowInput();
     WindowGraph();
+    WindowCalcs();
     WindowDemoGraph();
 }
 
