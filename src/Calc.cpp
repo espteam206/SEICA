@@ -33,7 +33,7 @@ void App::Calculate() {
     for (ContributorType type : MATERIAL_TYPES) {
         for (const InputVal& material : m_InputVals[type]) {
             // TODO: Notify of errors
-            if (material.Name == -1 || material.Trans == -1) {
+            if (material.Name == -1) {
                 std::cout << "A value in ";
                 std::cout << s_ContribPopupTitles[type];
                 std::cout << " category was not set!\n";
@@ -64,20 +64,19 @@ void App::Calculate() {
             m_GraphValues.push_back(matCO2);
             m_MassValues.push_back(mass);
 
-            // material.Dist in CO2 per (km * 1000kg) of transportation
-            float perKm = m_MixVals[ContributorType::Transport][material.Trans].Value * 0.001;
-            float transCO2 = mass * material.Dist * perKm;
+            m_TotalCO2 += matCO2;
 
-            m_GraphLabels.push_back(m_MixVals[ContributorType::Transport][material.Trans].Name.c_str());
-            m_GraphValues.push_back(transCO2);
-            m_MassValues.push_back(0.0f);
+            if (material.Trans != -1) {
+                // material.Dist in CO2 per (km * 1000kg) of transportation
+                float perKm = m_MixVals[ContributorType::Transport][material.Trans].Value * 0.001;
+                float transCO2 = mass * material.Dist * perKm;
 
-            std::cout << "Material name: " << m_MixVals[type][material.Name].Name << "\n";
-            std::cout << "  Material carbon contribution: " << matCO2 << " kg of CO2\n";
-            std::cout << " Transportation name: " << m_MixVals[ContributorType::Transport][material.Trans].Name << "\n";
-            std::cout << "  Transportation carbon contribution: " << transCO2 << " kg of CO2\n";
+                m_GraphLabels.push_back(m_MixVals[ContributorType::Transport][material.Trans].Name.c_str());
+                m_GraphValues.push_back(transCO2);
+                m_MassValues.push_back(0.0f);
 
-            m_TotalCO2 += matCO2 + transCO2;
+                m_TotalCO2 += transCO2;
+            }
         }
     }
 
@@ -98,7 +97,7 @@ void App::Calculate() {
                 continue;
             }
 
-            float waterKg = water.Value * 0.01f * mixtureKg;
+            float waterKg = water.Value * mixtureKg;
             float waterVol = waterKg * 0.001f;
             float CO2perKg = m_MixVals[ContributorType::Water][water.Name].Value * waterVol;
             float waterCO2 = waterKg * CO2perKg;

@@ -34,7 +34,7 @@ App::App() {
     style.ChildBorderSize = 0.0f;
     style.WindowMinSize = { 200.0f, 200.0f };
 
-    LoadData("res/Data.csv");
+    LoadData("res/databases/Test.csv");
 
     // static const ImU32 MyColors[3] = {IM_COL32(255,0,0,255), IM_COL32(0,255,0,255), IM_COL32(0,0,255,255)};
     // ImPlotColormap myColormap = ImPlot::AddColormap("DFSLJKSFDLJKDSFLKJ", MyColors, 3);
@@ -54,7 +54,7 @@ void App::WindowInput() {
         "kg/m^3 cement",
         "kg/m^3 cement",
         "kg/(tonne*km)",
-        "% some weird-ass ratio",
+        "ratio",
     };
 
     ImGui::Begin("Mixture parameters", &m_ShowInput);
@@ -112,7 +112,7 @@ void App::WindowInput() {
 
             ImGui::TableNextColumn();
             const char* unit = s_InputValueUnits[type];
-            ImGui::InputFloat(unit, &vals[i].Value, 0.0f, 0.0f, "%.2f");
+            ImGui::InputFloat(unit, &vals[i].Value, 0.0f, 0.0f, "%.3f");
 
             ImGui::TableNextRow();
             ImGui::TableNextColumn(); // Skip the column with the "minus" button
@@ -294,7 +294,10 @@ void App::PopupMixtures() {
                 }
 
                 ImGui::TableNextColumn();
-                ImGui::Text("%.2f", val.Value);
+                if (val.Value < 0.1f)
+                    ImGui::Text("%.2e", val.Value);
+                else
+                    ImGui::Text("%.3f", val.Value);
                 ImGui::TableNextColumn();
                 ImGui::Text("%.2f%%", val.Accuracy * 100);
                 ImGui::TableNextColumn();
@@ -499,7 +502,6 @@ void App::LoadData(const std::filesystem::path& path) {
                 throw std::invalid_argument("Invalid contributor type");
 
             m_MixVals[type].emplace_back(
-                // type,
                 value,
                 accuracy,
                 std::move(name),
@@ -511,7 +513,7 @@ void App::LoadData(const std::filesystem::path& path) {
             printf("Row: %d column: %d\n", csv.GetRow(), csv.GetColumn());
             continue;
         } catch (std::invalid_argument& e) {
-            printf("Error reading csv file!\n");
+            printf("Error reading csv file! %s\n", e.what());
             printf("Row: %d column: %d\n", csv.GetRow(), csv.GetColumn());
             continue;
         }

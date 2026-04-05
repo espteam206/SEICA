@@ -1,0 +1,24 @@
+Contributor,Category,Name,Location,"Kg of CO2 per (material, kg; water, m^3; transport, tonne*km)"
+Cement,,CEM I,,0.889,0,https://www.mdpi.com/1996-1073/16/7/3229
+Cement,,CEM II,,0.704,0,https://www.mdpi.com/1996-1073/16/7/3229
+Cement,,CEM III,,0.482,0,https://www.mdpi.com/1996-1073/16/7/3229
+SCM,,GGBS,,0.002,0,https://www.mdpi.com/1996-1073/16/7/3229
+Aggregates,,Sand 0-2mm,,0.0031,0,https://www.mdpi.com/1996-1073/16/7/3229
+Aggregates,,Sand max. 4.75 mm,,0.0031,0,https://www.mdpi.com/1996-1073/16/7/3229
+Aggregates,,Gravel 2-8 mm,,0.0031,0,https://www.mdpi.com/1996-1073/16/7/3229
+Aggregates,,Gravel 8-16 mm,,0.0031,0,https://www.mdpi.com/1996-1073/16/7/3229
+Aggregates,,Basalt 2-8 mm,,0.0064,0,https://www.mdpi.com/1996-1073/16/7/3229
+Aggregates,,Basalt 8-16 mm,,0.0064,0,https://www.mdpi.com/1996-1073/16/7/3229
+Aggregates,,Granite 4-8 mm,,0.0064,0,https://www.mdpi.com/1996-1073/16/7/3229
+Aggregates,,Quartz Sand,,0.02,0,https://www.mdpi.com/1996-1073/16/7/3229
+Aggregates,,Crushed limestone,,0.063,0,https://www.mdpi.com/1996-1073/16/7/3229
+Aggregates,,Lightweight expanded clay,,0.127,0,https://www.mdpi.com/1996-1073/16/7/3229
+Aggregates,,Concrete waste,,0.0047,0,https://www.mdpi.com/1996-1073/16/7/3229
+Water,,Water,,0.0006,0,https://www.mdpi.com/1996-1073/16/7/3229
+SCM,,Silica fume,,0.0039,0,https://www.mdpi.com/1996-1073/16/7/3229
+SCM,,Fly ash,,0.002,0,https://www.mdpi.com/1996-1073/16/7/3229
+SCM,,Steel fibres,,1.28,0,https://www.mdpi.com/1996-1073/16/7/3229
+SCM,,Glass fibres,,1.44,0,https://www.mdpi.com/1996-1073/16/7/3229
+Admixtures,,Superplasticizer,,1.53,0,https://www.mdpi.com/1996-1073/16/7/3229
+Admixtures,,Na2SiO3 (solution),,0.823,0,https://www.mdpi.com/1996-1073/16/7/3229
+Admixtures,,NaOH,,0.07,0,https://www.mdpi.com/1996-1073/16/7/3229
